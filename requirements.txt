@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+streamlit
+requests
+python-dotenv
+psycopg2-binary
+langchain
+langchain-openai
+langgraph
+pgvector
