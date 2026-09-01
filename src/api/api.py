@@ -52,19 +52,22 @@ def chat(
 ):
     try:
         result = smartshop_graph.invoke(
-            {
-                "user_request": request.message,
-                "selected_agent": "",
-                "response": ""
-            }
-        )
+        {
+            "user_request": request.message,
+            "selected_agents": [],
+            "agent_results": [],
+            "response": ""
+        }
+)
 
         return {
-            "agent": result["selected_agent"],
+            "agents": result["selected_agents"],
             "response": result["response"]
         }
 
-    except Exception:
+    except Exception as e:
+        print("CHAT ERROR:", repr(e))
+
         raise HTTPException(
             status_code=500,
             detail="Unable to process the request."
