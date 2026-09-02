@@ -1,4 +1,5 @@
-## this file is used to deploy the SmartShop application to an EC2 instance using GitHub Actions. It triggers on pushes to the main branch and uses SSH to connect to the EC2 instance, pull the latest code, and restart the Docker containers.###
+## Deploy SmartShop to EC2 using GitHub Actions + AWS OIDC + Systems Manager.
+## No SSH key is required.
 
 name: Deploy SmartShop to EC2
 
@@ -7,19 +8,45 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
 
-          script: |
-            cd "$HOME/-SmartShop_AI"
-            git pull origin main
-            sudo docker compose up -d --build
+      - name: Deploy through AWS Systems Manager
+        run: |
+          cat > /tmp/ssm-params.json <<'JSON'
+          {
+            "commands": [
+              "sudo -u ubuntu bash -lc 'cd /home/ubuntu/-SmartShop_AI && git pull origin main'",
+              "cd /home/ubuntu/-SmartShop_AI && docker compose up -d --build"
+            ]
+          }
+          JSON
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "i-0638f0e35651cec27" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/ssm-params.json \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM command: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0638f0e35651cec27"
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0638f0e35651cec27"
