@@ -1,3 +1,5 @@
+## this file is used to deploy the SmartShop application to an EC2 instance using GitHub Actions. It triggers on pushes to the main branch and uses SSH to connect to the EC2 instance, pull the latest code, and restart the Docker containers.###
+
 name: Deploy SmartShop to EC2
 
 on:
